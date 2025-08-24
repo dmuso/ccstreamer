@@ -305,7 +305,7 @@ fn isWindowsColorSupported() bool {
     // STD_OUTPUT_HANDLE is -11 (0xFFFFFFF5 when cast to DWORD)
     const STD_OUTPUT_HANDLE: win.DWORD = @bitCast(@as(i32, -11));
 
-    const stdout_handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE) catch return false;
+    const stdout_handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE) orelse return false;
 
     // Check for invalid handle
     if (stdout_handle == INVALID_HANDLE_VALUE) return false;
