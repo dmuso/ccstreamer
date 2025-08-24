@@ -39,6 +39,9 @@ release:
     
     ---
 
+universal_binaries:
+- replace: true
+
 notarize:
   macos:
   # Whether this configuration is enabled or not.
