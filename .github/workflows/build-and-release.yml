@@ -9,7 +9,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 env:
-  ZIG_VERSION: 0.13.0  # Update to match your Zig version
+  ZIG_VERSION: 0.14.0  # Update to match your Zig version
 
 jobs:
   build:
@@ -38,7 +38,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Fetch all history for version determination
 
@@ -103,7 +103,7 @@ jobs:
         Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.zip"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}
         path: |
@@ -120,7 +120,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Get version
       id: get_version
@@ -192,7 +192,7 @@ jobs:
         EOF
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         name: CC Streamer ${{ steps.get_version.outputs.VERSION }}
         body_path: release_notes.md
@@ -220,7 +220,7 @@ jobs:
         echo '```' >> checksums.md
 
     - name: Upload checksums to release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: checksums.txt
         body_path: checksums.md
