@@ -44,6 +44,8 @@ jobs:
           archive_ext: zip
 
     env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # The base64 of the contents of your '.p12' key.
       MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
 
