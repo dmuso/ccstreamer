@@ -16,6 +16,9 @@ builds:
   - aarch64-linux
   - x86_64-macos
   - aarch64-macos
+  env:
+  # Use system linker on macOS to ensure proper header padding for code signing
+  - ZIG_SYSTEM_LINKER_HACK=1
 
 archives:
 - formats: [ tar.gz ]

@@ -3,6 +3,13 @@ const std = @import("std");
 // Version information
 const version = "0.1.10";
 
+// macOS Build Note:
+// If you encounter code signing issues on macOS (especially for notarization),
+// set the ZIG_SYSTEM_LINKER_HACK=1 environment variable to use Apple's system
+// linker which properly handles header padding for code signatures:
+//   export ZIG_SYSTEM_LINKER_HACK=1
+//   zig build --release=fast
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
