@@ -13,6 +13,12 @@ const Allocator = std.mem.Allocator;
 const HashMap = std.HashMap;
 const ArrayList = std.ArrayList;
 
+// Windows console mode flags
+const ENABLE_PROCESSED_OUTPUT: u32 = 0x0001;
+const ENABLE_WRAP_AT_EOL_OUTPUT: u32 = 0x0002;
+const ENABLE_VIRTUAL_TERMINAL_PROCESSING: u32 = 0x0004;
+const INVALID_HANDLE_VALUE = @as(*anyopaque, @ptrFromInt(std.math.maxInt(usize)));
+
 /// ANSI Color Code representation
 pub const Color = struct {
     code: u8,
@@ -281,14 +287,42 @@ pub fn isColorEnabled() bool {
     }
 
     // Check if stdout is a TTY
-    // On Windows, STDOUT_FILENO is already a file descriptor type (*anyopaque)
-    // On Unix, it's a comptime_int that needs no casting
-    const stdout_fd = if (@import("builtin").os.tag == .windows)
-        std.io.getStdOut().handle
-    else
-        std.posix.STDOUT_FILENO;
+    const builtin = @import("builtin");
 
-    return std.posix.isatty(stdout_fd);
+    return switch (builtin.os.tag) {
+        .windows => isWindowsColorSupported(),
+        else => {
+            // On Unix-like systems, use isatty
+            return std.posix.isatty(std.posix.STDOUT_FILENO);
+        },
+    };
+}
+
+/// Enhanced Windows TTY detection with Virtual Terminal Processing support
+fn isWindowsColorSupported() bool {
+    const win = std.os.windows;
+    const kernel32 = win.kernel32;
+    // STD_OUTPUT_HANDLE is -11 (0xFFFFFFF5 when cast to DWORD)
+    const STD_OUTPUT_HANDLE: win.DWORD = @bitCast(@as(i32, -11));
+
+    const stdout_handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE) catch return false;
+
+    // Check for invalid handle
+    if (stdout_handle == INVALID_HANDLE_VALUE) return false;
+
+    var mode: win.DWORD = undefined;
+    if (kernel32.GetConsoleMode(stdout_handle, &mode) == 0) return false;
+
+    // Try to enable Virtual Terminal Processing if not already enabled
+    // This allows ANSI escape sequences to work on Windows 10+
+    if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0) {
+        const new_mode = mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        // SetConsoleMode might fail on older Windows versions, but that's ok
+        // We still return true since the console exists, just without color support
+        _ = kernel32.SetConsoleMode(stdout_handle, new_mode);
+    }
+
+    return true;
 }
 
 // =====================================

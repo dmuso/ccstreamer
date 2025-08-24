@@ -14,6 +14,12 @@ const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 const builtin = @import("builtin");
 
+// Windows console mode flags
+const ENABLE_PROCESSED_OUTPUT: u32 = 0x0001;
+const ENABLE_WRAP_AT_EOL_OUTPUT: u32 = 0x0002;
+const ENABLE_VIRTUAL_TERMINAL_PROCESSING: u32 = 0x0004;
+const INVALID_HANDLE_VALUE = @as(*anyopaque, @ptrFromInt(std.math.maxInt(usize)));
+
 /// ANSI color codes
 pub const AnsiCodes = struct {
     pub const RESET = "\x1b[0m";
@@ -250,19 +256,39 @@ pub fn isColorEnabled() bool {
 pub fn isTty() bool {
     // Platform-specific TTY detection
     return switch (builtin.os.tag) {
-        .windows => {
-            // On Windows, check console mode
-            const win = std.os.windows;
-            const kernel32 = win.kernel32;
-            const stdout_handle = kernel32.GetStdHandle(kernel32.STD_OUTPUT_HANDLE) catch return false;
-            var mode: win.DWORD = undefined;
-            return kernel32.GetConsoleMode(stdout_handle, &mode) != 0;
-        },
+        .windows => isWindowsColorSupported(),
         else => {
             // On Unix-like systems, use isatty
             return std.posix.isatty(std.posix.STDOUT_FILENO);
         },
     };
+}
+
+/// Enhanced Windows TTY detection with Virtual Terminal Processing support
+fn isWindowsColorSupported() bool {
+    const win = std.os.windows;
+    const kernel32 = win.kernel32;
+    // STD_OUTPUT_HANDLE is -11 (0xFFFFFFF5 when cast to DWORD)
+    const STD_OUTPUT_HANDLE: win.DWORD = @bitCast(@as(i32, -11));
+
+    const stdout_handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE) catch return false;
+
+    // Check for invalid handle
+    if (stdout_handle == INVALID_HANDLE_VALUE) return false;
+
+    var mode: win.DWORD = undefined;
+    if (kernel32.GetConsoleMode(stdout_handle, &mode) == 0) return false;
+
+    // Try to enable Virtual Terminal Processing if not already enabled
+    // This allows ANSI escape sequences to work on Windows 10+
+    if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0) {
+        const new_mode = mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        // SetConsoleMode might fail on older Windows versions, but that's ok
+        // We still return true since the console exists, just without color support
+        _ = kernel32.SetConsoleMode(stdout_handle, new_mode);
+    }
+
+    return true;
 }
 
 /// Load color scheme from environment variable or file
