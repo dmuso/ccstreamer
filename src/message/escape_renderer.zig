@@ -3,7 +3,7 @@
 //! This module renders JSON escape sequences as actual characters.
 //! From PRD v2 requirements:
 //! - \n → actual line break
-//! - \t → actual tab  
+//! - \t → actual tab
 //! - \" → quote character
 //! - Other standard JSON escape sequences
 //! - Preserve formatting integrity of code blocks
@@ -82,7 +82,7 @@ pub const EscapeRenderer = struct {
                     continue;
                 }
             }
-            
+
             // Regular character, just append
             try result.append(input[i]);
             i += 1;
@@ -179,7 +179,7 @@ pub const EscapeRenderer = struct {
                     i.* += 1;
                     return false;
                 }
-            }
+            },
         }
     }
 
@@ -198,8 +198,8 @@ pub const EscapeRenderer = struct {
 
         // Parse 4 hex digits
         const hex_start = i.* + 2;
-        const hex_digits = input[hex_start..hex_start + 4];
-        
+        const hex_digits = input[hex_start .. hex_start + 4];
+
         const code_point = std.fmt.parseInt(u16, hex_digits, 16) catch {
             self.stats.invalid_sequences += 1;
             if (self.config.preserve_literals) {
@@ -248,8 +248,8 @@ pub const EscapeRenderer = struct {
 
         // Parse second hex sequence
         const hex_start = i.* + 8;
-        const hex_digits = input[hex_start..hex_start + 4];
-        
+        const hex_digits = input[hex_start .. hex_start + 4];
+
         const low_surrogate = std.fmt.parseInt(u16, hex_digits, 16) catch {
             self.stats.invalid_sequences += 1;
             return true;
@@ -311,7 +311,7 @@ pub const EscapeRenderer = struct {
 test "EscapeRenderer.init creates renderer with config" {
     const config = EscapeRenderConfig{};
     const renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     try testing.expect(renderer.config.enabled);
     try testing.expect(renderer.config.preserve_literals);
     try testing.expectEqual(@as(u32, 0), renderer.stats.sequences_processed);
@@ -320,11 +320,11 @@ test "EscapeRenderer.init creates renderer with config" {
 test "EscapeRenderer.renderEscapeSequences handles newlines" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Hello\\nWorld\\nAgain";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Hello\nWorld\nAgain", result);
     try testing.expectEqual(@as(u32, 2), renderer.getStats().newlines_rendered);
 }
@@ -332,11 +332,11 @@ test "EscapeRenderer.renderEscapeSequences handles newlines" {
 test "EscapeRenderer.renderEscapeSequences handles tabs" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Column1\\tColumn2\\tColumn3";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Column1\tColumn2\tColumn3", result);
     try testing.expectEqual(@as(u32, 2), renderer.getStats().tabs_rendered);
 }
@@ -344,11 +344,11 @@ test "EscapeRenderer.renderEscapeSequences handles tabs" {
 test "EscapeRenderer.renderEscapeSequences handles quotes" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Say \\\"Hello\\\" to the world";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Say \"Hello\" to the world", result);
     try testing.expectEqual(@as(u32, 2), renderer.getStats().quotes_rendered);
 }
@@ -356,14 +356,14 @@ test "EscapeRenderer.renderEscapeSequences handles quotes" {
 test "EscapeRenderer.renderEscapeSequences handles all standard escapes" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "\\n\\t\\r\\b\\f\\\"\\'\\\\\\/";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
-    const expected = "\n\t\r\x08\x0C\"'\\/"; 
+
+    const expected = "\n\t\r\x08\x0C\"'\\/";
     try testing.expectEqualStrings(expected, result);
-    
+
     const stats = renderer.getStats();
     try testing.expect(stats.sequences_processed >= 9);
 }
@@ -371,11 +371,11 @@ test "EscapeRenderer.renderEscapeSequences handles all standard escapes" {
 test "EscapeRenderer.renderEscapeSequences handles Unicode escapes" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Hello \\u0041\\u0042\\u0043"; // ABC in Unicode
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Hello ABC", result);
     try testing.expectEqual(@as(u32, 3), renderer.getStats().unicode_rendered);
 }
@@ -383,11 +383,11 @@ test "EscapeRenderer.renderEscapeSequences handles Unicode escapes" {
 test "EscapeRenderer.renderEscapeSequences handles Unicode emoji" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Smile \\ud83d\\ude00"; // 😀 emoji as surrogate pair
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Smile 😀", result);
     try testing.expectEqual(@as(u32, 1), renderer.getStats().unicode_rendered);
 }
@@ -395,11 +395,11 @@ test "EscapeRenderer.renderEscapeSequences handles Unicode emoji" {
 test "EscapeRenderer.renderEscapeSequences handles malformed Unicode" {
     const config = EscapeRenderConfig{ .preserve_literals = false };
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Bad \\uGGGG sequence";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Bad  sequence", result);
     try testing.expect(renderer.getStats().invalid_sequences > 0);
 }
@@ -407,25 +407,25 @@ test "EscapeRenderer.renderEscapeSequences handles malformed Unicode" {
 test "EscapeRenderer.renderEscapeSequences with preserve_literals keeps unknowns" {
     const config = EscapeRenderConfig{ .preserve_literals = true };
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Unknown \\x escape";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Unknown \\x escape", result);
 }
 
 test "EscapeRenderer.renderEscapeSequences handles mixed content" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Text with\\nnewlines and\\ttabs plus \\\"quotes\\\" and \\u0041 Unicode";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     const expected = "Text with\nnewlines and\ttabs plus \"quotes\" and A Unicode";
     try testing.expectEqualStrings(expected, result);
-    
+
     const stats = renderer.getStats();
     try testing.expectEqual(@as(u32, 1), stats.newlines_rendered);
     try testing.expectEqual(@as(u32, 1), stats.tabs_rendered);
@@ -436,11 +436,11 @@ test "EscapeRenderer.renderEscapeSequences handles mixed content" {
 test "EscapeRenderer.renderEscapeSequences when disabled returns original" {
     const config = EscapeRenderConfig{ .enabled = false };
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Keep\\nescapes\\tas\\rliterals";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings(input, result);
     try testing.expectEqual(@as(u32, 0), renderer.getStats().sequences_processed);
 }
@@ -448,11 +448,11 @@ test "EscapeRenderer.renderEscapeSequences when disabled returns original" {
 test "EscapeRenderer.renderEscapeSequences handles empty input" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("", result);
     try testing.expectEqual(@as(usize, 0), renderer.getStats().bytes_output);
 }
@@ -460,11 +460,11 @@ test "EscapeRenderer.renderEscapeSequences handles empty input" {
 test "EscapeRenderer.renderEscapeSequences handles only escape sequences" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "\\n\\t\\r";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("\n\t\r", result);
     try testing.expectEqual(@as(u32, 3), renderer.getStats().sequences_processed);
 }
@@ -472,10 +472,10 @@ test "EscapeRenderer.renderEscapeSequences handles only escape sequences" {
 test "EscapeRenderer.renderEscapeSequences respects max_output_length" {
     const config = EscapeRenderConfig{ .max_output_length = 5 };
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "This is a very long string that exceeds the limit";
     const result = renderer.renderEscapeSequences(input);
-    
+
     try testing.expectError(EscapeRenderError.OutOfMemory, result);
 }
 
@@ -484,7 +484,7 @@ test "EscapeRenderer.containsEscapeSequences detects escape sequences" {
     try testing.expect(EscapeRenderer.containsEscapeSequences("Tab\\there"));
     try testing.expect(EscapeRenderer.containsEscapeSequences("Quote\\\"test"));
     try testing.expect(EscapeRenderer.containsEscapeSequences("Unicode\\u0041"));
-    
+
     try testing.expect(!EscapeRenderer.containsEscapeSequences("Plain text"));
     try testing.expect(!EscapeRenderer.containsEscapeSequences("Backslash at end\\"));
     try testing.expect(!EscapeRenderer.containsEscapeSequences("Unknown\\x"));
@@ -493,16 +493,16 @@ test "EscapeRenderer.containsEscapeSequences detects escape sequences" {
 test "EscapeRenderer statistics tracking" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Complex\\nstring\\twith\\u0020various\\\"escapes";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     const stats = renderer.getStats();
     try testing.expect(stats.bytes_processed > 0);
     try testing.expect(stats.bytes_output > 0);
     try testing.expect(stats.sequences_processed >= 4);
-    
+
     // Reset stats
     renderer.resetStats();
     const reset_stats = renderer.getStats();
@@ -513,22 +513,22 @@ test "EscapeRenderer statistics tracking" {
 test "EscapeRenderer handles incomplete escape sequences at end" {
     const config = EscapeRenderConfig{ .preserve_literals = true };
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "Text ending with\\";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("Text ending with\\", result);
 }
 
 test "EscapeRenderer handles consecutive escape sequences" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const input = "\\n\\n\\t\\t\\\"\\\"";
     const result = try renderer.renderEscapeSequences(input);
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("\n\n\t\t\"\"", result);
     try testing.expectEqual(@as(u32, 2), renderer.getStats().newlines_rendered);
     try testing.expectEqual(@as(u32, 2), renderer.getStats().tabs_rendered);
@@ -538,14 +538,14 @@ test "EscapeRenderer handles consecutive escape sequences" {
 test "EscapeRenderer memory management with multiple renders" {
     const config = EscapeRenderConfig{};
     var renderer = EscapeRenderer.init(testing.allocator, config);
-    
+
     const inputs = [_][]const u8{
         "First\\nmessage",
         "Second\\tmessage",
         "Third\\\"message",
         "Fourth\\u0041message",
     };
-    
+
     var results = ArrayList([]u8).init(testing.allocator);
     defer {
         for (results.items) |result| {
@@ -553,12 +553,12 @@ test "EscapeRenderer memory management with multiple renders" {
         }
         results.deinit();
     }
-    
+
     for (inputs) |input| {
         const result = try renderer.renderEscapeSequences(input);
         try results.append(result);
     }
-    
+
     try testing.expectEqual(@as(usize, 4), results.items.len);
     try testing.expect(renderer.getStats().sequences_processed >= 4);
 }

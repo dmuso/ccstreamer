@@ -1,5 +1,5 @@
 //! JSON Parser Core for CC Streamer
-//! 
+//!
 //! This module implements a recursive descent JSON parser that:
 //! - Uses the tokenizer to get tokens
 //! - Builds AST using ast.zig structures
@@ -31,7 +31,7 @@ pub const ParseError = error{
     InvalidString,
     InvalidEscape,
     TooMuchNesting,
-    
+
     // Include tokenizer errors
     InvalidToken,
     UnterminatedString,
@@ -59,9 +59,9 @@ pub const Parser = struct {
     current_depth: u32,
     last_error: ?ParseError,
     error_count: u32,
-    
+
     const Self = @This();
-    
+
     /// Initialize a new parser
     pub fn init(allocator: Allocator, tok: *Tokenizer, config: ParserConfig) Self {
         return Self{
@@ -73,17 +73,17 @@ pub const Parser = struct {
             .error_count = 0,
         };
     }
-    
+
     /// Parse a complete JSON value from the token stream
     pub fn parseValue(self: *Self) ParseError!JsonValue {
         const token = try self.tokenizer.nextToken();
         return self.parseValueFromToken(token);
     }
-    
+
     /// Parse a JSON value from a specific token
     fn parseValueFromToken(self: *Self, token: Token) ParseError!JsonValue {
         const pos = Position.init(token.position.line, token.position.column);
-        
+
         return switch (token.type) {
             .left_brace => self.parseObject(pos),
             .left_bracket => self.parseArray(pos),
@@ -103,7 +103,7 @@ pub const Parser = struct {
             },
         };
     }
-    
+
     /// Parse a JSON object
     fn parseObject(self: *Self, position: Position) ParseError!JsonValue {
         // Check nesting depth
@@ -112,17 +112,17 @@ pub const Parser = struct {
         }
         self.current_depth += 1;
         defer self.current_depth -= 1;
-        
+
         var object = try JsonValue.createObject(self.allocator, position);
         errdefer object.deinit(self.allocator);
-        
+
         // Check for empty object
         const peek_token = try self.tokenizer.peekToken();
         if (peek_token.type == .right_brace) {
             _ = try self.tokenizer.nextToken(); // consume the }
             return object;
         }
-        
+
         // Parse key-value pairs
         while (true) {
             // Parse key (must be string)
@@ -130,28 +130,28 @@ pub const Parser = struct {
             if (key_token.type != .string) {
                 return ParseError.UnexpectedToken;
             }
-            
+
             // Remove quotes from key
-            const key = self.unescapeString(key_token.value) catch key_token.value[1..key_token.value.len-1];
-            
+            const key = self.unescapeString(key_token.value) catch key_token.value[1 .. key_token.value.len - 1];
+
             // Expect colon
             const colon_token = try self.tokenizer.nextToken();
             if (colon_token.type != .colon) {
                 return ParseError.UnexpectedToken;
             }
-            
+
             // Parse value
             const value_token = try self.tokenizer.nextToken();
             const value = try self.parseValueFromToken(value_token);
-            
+
             // Check for duplicate keys if configured
             if (!self.config.allow_duplicate_keys and object.data.object.get(key) != null) {
                 return ParseError.DuplicateKey;
             }
-            
+
             // Add to object
             try object.data.object.put(key, value);
-            
+
             // Check for comma or end of object
             const next_token = try self.tokenizer.nextToken();
             switch (next_token.type) {
@@ -171,38 +171,38 @@ pub const Parser = struct {
                 },
             }
         }
-        
+
         return object;
     }
-    
+
     /// Parse a JSON array
     fn parseArray(self: *Self, position: Position) ParseError!JsonValue {
-        // Check nesting depth  
+        // Check nesting depth
         if (self.current_depth >= self.config.max_depth) {
             return ParseError.TooMuchNesting;
         }
         self.current_depth += 1;
         defer self.current_depth -= 1;
-        
+
         var array = try JsonValue.createArray(self.allocator, position);
         errdefer array.deinit(self.allocator);
-        
+
         // Check for empty array
         const peek_token = try self.tokenizer.peekToken();
         if (peek_token.type == .right_bracket) {
             _ = try self.tokenizer.nextToken(); // consume the ]
             return array;
         }
-        
+
         // Parse array elements
         while (true) {
             // Parse value
             const value_token = try self.tokenizer.nextToken();
             const value = try self.parseValueFromToken(value_token);
-            
+
             // Add to array
             try array.data.array.append(value);
-            
+
             // Check for comma or end of array
             const next_token = try self.tokenizer.nextToken();
             switch (next_token.type) {
@@ -222,45 +222,45 @@ pub const Parser = struct {
                 },
             }
         }
-        
+
         return array;
     }
-    
+
     /// Parse a string token into a JsonValue
     fn parseString(self: *Self, raw_value: []const u8, position: Position) ParseError!JsonValue {
         _ = self; // Currently we just store the raw string
         // In a more complete implementation, we might unescape the string here
         return JsonValue.createString(raw_value, position);
     }
-    
+
     /// Parse a number token into a JsonValue
     fn parseNumber(self: *Self, raw_value: []const u8, position: Position) ParseError!JsonValue {
         _ = self; // For potential validation in the future
         // Store the raw number string for precise representation
         return JsonValue.createNumber(raw_value, position);
     }
-    
+
     /// Unescape a JSON string (basic implementation)
     fn unescapeString(self: *Self, escaped: []const u8) ![]const u8 {
         _ = self; // For future implementation
         // For now, just remove the quotes
-        if (escaped.len < 2 or escaped[0] != '"' or escaped[escaped.len-1] != '"') {
+        if (escaped.len < 2 or escaped[0] != '"' or escaped[escaped.len - 1] != '"') {
             return ParseError.InvalidString;
         }
-        return escaped[1..escaped.len-1];
+        return escaped[1 .. escaped.len - 1];
     }
-    
+
     /// Record an error for statistics/debugging
     fn recordError(self: *Self, err: ParseError) void {
         self.last_error = err;
         self.error_count += 1;
     }
-    
+
     /// Get error statistics
     pub fn getErrorCount(self: *const Self) u32 {
         return self.error_count;
     }
-    
+
     /// Get last error that occurred
     pub fn getLastError(self: *const Self) ?ParseError {
         return self.last_error;
@@ -276,7 +276,7 @@ test "Parser initialization" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     const parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectEqual(@as(u32, 0), parser.current_depth);
     try testing.expectEqual(@as(u32, 0), parser.error_count);
     try testing.expect(parser.last_error == null);
@@ -287,10 +287,10 @@ test "Parse simple JSON string" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.string, value.type);
     try testing.expectEqualStrings("\"hello world\"", value.data.string);
 }
@@ -300,10 +300,10 @@ test "Parse simple JSON number" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.number, value.type);
     try testing.expectEqualStrings("42.5", value.data.number);
 }
@@ -315,24 +315,24 @@ test "Parse JSON boolean values" {
         var tok = Tokenizer.init(testing.allocator, input);
         const config = ParserConfig{};
         var parser = Parser.init(testing.allocator, &tok, config);
-        
+
         var value = try parser.parseValue();
         defer value.deinit(testing.allocator);
-        
+
         try testing.expectEqual(ast.ValueType.boolean, value.type);
         try testing.expect(value.data.boolean);
     }
-    
+
     // Test false
     {
         const input = "false";
         var tok = Tokenizer.init(testing.allocator, input);
         const config = ParserConfig{};
         var parser = Parser.init(testing.allocator, &tok, config);
-        
+
         var value = try parser.parseValue();
         defer value.deinit(testing.allocator);
-        
+
         try testing.expectEqual(ast.ValueType.boolean, value.type);
         try testing.expect(!value.data.boolean);
     }
@@ -343,10 +343,10 @@ test "Parse JSON null value" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.null, value.type);
 }
 
@@ -355,10 +355,10 @@ test "Parse empty JSON object" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
     try testing.expect(value.data.object.isEmpty());
 }
@@ -368,18 +368,18 @@ test "Parse simple JSON object" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
     try testing.expectEqual(@as(usize, 2), value.data.object.count());
-    
+
     // Check "name" field
     const name_value = value.data.object.get("name");
     try testing.expect(name_value != null);
     try testing.expectEqual(ast.ValueType.string, name_value.?.type);
-    
+
     // Check "value" field
     const value_field = value.data.object.get("value");
     try testing.expect(value_field != null);
@@ -391,10 +391,10 @@ test "Parse empty JSON array" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.array, value.type);
     try testing.expect(value.data.array.isEmpty());
 }
@@ -404,23 +404,23 @@ test "Parse simple JSON array" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.array, value.type);
     try testing.expectEqual(@as(usize, 3), value.data.array.count());
-    
+
     // Check array elements
     const first = value.data.array.get(0);
     try testing.expect(first != null);
     try testing.expectEqual(ast.ValueType.number, first.?.type);
     try testing.expectEqualStrings("1", first.?.data.number);
-    
+
     const second = value.data.array.get(1);
     try testing.expect(second != null);
     try testing.expectEqualStrings("2", second.?.data.number);
-    
+
     const third = value.data.array.get(2);
     try testing.expect(third != null);
     try testing.expectEqualStrings("3", third.?.data.number);
@@ -431,24 +431,24 @@ test "Parse nested JSON structure" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
     try testing.expectEqual(@as(usize, 2), value.data.object.count());
-    
+
     // Check "data" array
     const data_value = value.data.object.get("data");
     try testing.expect(data_value != null);
     try testing.expectEqual(ast.ValueType.array, data_value.?.type);
     try testing.expectEqual(@as(usize, 2), data_value.?.data.array.count());
-    
+
     // Check "nested" object
     const nested_value = value.data.object.get("nested");
     try testing.expect(nested_value != null);
     try testing.expectEqual(ast.ValueType.object, nested_value.?.type);
-    
+
     const inner_value = nested_value.?.data.object.get("inner");
     try testing.expect(inner_value != null);
     try testing.expectEqual(ast.ValueType.boolean, inner_value.?.type);
@@ -461,7 +461,7 @@ test "Parse error - unexpected EOF" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedEof, parser.parseValue());
 }
 
@@ -470,7 +470,7 @@ test "Parse error - unexpected token" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedToken, parser.parseValue());
 }
 
@@ -479,7 +479,7 @@ test "Parse error - malformed object missing colon" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedToken, parser.parseValue());
 }
 
@@ -488,7 +488,7 @@ test "Parse error - malformed object missing closing brace" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedEof, parser.parseValue());
 }
 
@@ -497,7 +497,7 @@ test "Parse error - malformed array missing closing bracket" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedEof, parser.parseValue());
 }
 
@@ -506,7 +506,7 @@ test "Parse error - duplicate keys detection" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{ .allow_duplicate_keys = false };
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.DuplicateKey, parser.parseValue());
 }
 
@@ -515,10 +515,10 @@ test "Parse with duplicate keys allowed" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{ .allow_duplicate_keys = true };
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
     // The second value should overwrite the first
     const key_value = value.data.object.get("key");
@@ -530,9 +530,9 @@ test "Error statistics tracking" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     _ = parser.parseValue() catch {};
-    
+
     try testing.expectEqual(@as(u32, 1), parser.getErrorCount());
     try testing.expect(parser.getLastError() != null);
 }
@@ -543,12 +543,12 @@ test "Parse deeply nested structure" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
-    
+
     // Navigate through the nested structure
     const a = value.data.object.get("a");
     try testing.expect(a != null);
@@ -568,13 +568,13 @@ test "Parse mixed array types" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.array, value.type);
     try testing.expectEqual(@as(usize, 6), value.data.array.count());
-    
+
     // Check each element type
     try testing.expectEqual(ast.ValueType.string, value.data.array.get(0).?.type);
     try testing.expectEqual(ast.ValueType.number, value.data.array.get(1).?.type);
@@ -589,13 +589,13 @@ test "Parse with scientific notation numbers" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.array, value.type);
     try testing.expectEqual(@as(usize, 3), value.data.array.count());
-    
+
     try testing.expectEqualStrings("1e10", value.data.array.get(0).?.data.number);
     try testing.expectEqualStrings("2.5E-3", value.data.array.get(1).?.data.number);
     try testing.expectEqualStrings("-1.23e+4", value.data.array.get(2).?.data.number);
@@ -606,16 +606,16 @@ test "Parse with Unicode strings" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     var value = try parser.parseValue();
     defer value.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ast.ValueType.object, value.type);
-    
+
     const emoji = value.data.object.get("emoji");
     try testing.expect(emoji != null);
     try testing.expectEqual(ast.ValueType.string, emoji.?.type);
-    
+
     const chinese = value.data.object.get("chinese");
     try testing.expect(chinese != null);
     try testing.expectEqual(ast.ValueType.string, chinese.?.type);
@@ -625,9 +625,9 @@ test "Parse error - nesting too deep" {
     // Create a deeply nested structure that exceeds max depth
     var nested = std.ArrayList(u8).init(testing.allocator);
     defer nested.deinit();
-    
+
     const max_depth = 10;
-    
+
     for (0..max_depth + 5) |_| {
         try nested.appendSlice("{\"a\":");
     }
@@ -635,11 +635,11 @@ test "Parse error - nesting too deep" {
     for (0..max_depth + 5) |_| {
         try nested.append('}');
     }
-    
+
     var tok = Tokenizer.init(testing.allocator, nested.items);
     const config = ParserConfig{ .max_depth = max_depth };
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.TooMuchNesting, parser.parseValue());
 }
 
@@ -648,7 +648,7 @@ test "Parse with trailing comma in object should fail" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedToken, parser.parseValue());
 }
 
@@ -657,7 +657,7 @@ test "Parse with trailing comma in array should fail" {
     var tok = Tokenizer.init(testing.allocator, input);
     const config = ParserConfig{};
     var parser = Parser.init(testing.allocator, &tok, config);
-    
+
     try testing.expectError(ParseError.UnexpectedToken, parser.parseValue());
 }
 
@@ -668,24 +668,24 @@ test "Parse empty object and array edge cases" {
         var tok = Tokenizer.init(testing.allocator, input);
         const config = ParserConfig{};
         var parser = Parser.init(testing.allocator, &tok, config);
-        
+
         var value = try parser.parseValue();
         defer value.deinit(testing.allocator);
-        
+
         try testing.expectEqual(ast.ValueType.object, value.type);
         try testing.expect(value.data.object.isEmpty());
     }
-    
-    // Array with whitespace  
+
+    // Array with whitespace
     {
         const input = "[ ]";
         var tok = Tokenizer.init(testing.allocator, input);
         const config = ParserConfig{};
         var parser = Parser.init(testing.allocator, &tok, config);
-        
+
         var value = try parser.parseValue();
         defer value.deinit(testing.allocator);
-        
+
         try testing.expectEqual(ast.ValueType.array, value.type);
         try testing.expect(value.data.array.isEmpty());
     }

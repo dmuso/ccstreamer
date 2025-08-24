@@ -43,7 +43,7 @@ pub const ColorCode = enum(u8) {
     magenta = 35,
     cyan = 36,
     gray = 90,
-    
+
     // Reserved for errors/warnings
     red = 31,
     bright_red = 91,
@@ -71,9 +71,10 @@ pub const ColorPool = struct {
 
         // Initialize with colors from PRD specification (excluding red tones)
         const default_colors = [_]ColorCode{
-            .bright_blue, .bright_green, .bright_yellow, 
-            .bright_magenta, .bright_cyan, .white,
-            .blue, .green, .yellow, .magenta, .cyan,
+            .bright_blue,    .bright_green, .bright_yellow,
+            .bright_magenta, .bright_cyan,  .white,
+            .blue,           .green,        .yellow,
+            .magenta,        .cyan,
         };
 
         for (default_colors) |color_code| {
@@ -167,7 +168,7 @@ pub const ColorManager = struct {
 
     pub fn deinit(self: *Self) void {
         self.color_pool.deinit();
-        
+
         // Free all stored type strings
         var iterator = self.type_color_map.iterator();
         while (iterator.next()) |entry| {
@@ -205,7 +206,7 @@ pub const ColorManager = struct {
             self.color_pool.returnColor(entry.value_ptr.*) catch {}; // Ignore errors
             self.allocator.free(entry.key_ptr.*);
         }
-        
+
         self.type_color_map.clearAndFree();
     }
 
@@ -273,12 +274,12 @@ pub fn isColorEnabled() bool {
     if (std.process.hasEnvVarConstant("NO_COLOR")) {
         return false;
     }
-    
-    // Check FORCE_COLOR to override TTY detection  
+
+    // Check FORCE_COLOR to override TTY detection
     if (std.process.hasEnvVarConstant("FORCE_COLOR")) {
         return true;
     }
-    
+
     // Check if stdout is a TTY
     return std.posix.isatty(std.posix.STDOUT_FILENO);
 }
@@ -291,7 +292,7 @@ test "Color.toAnsiCode generates correct escape sequence" {
     const color = Color{ .code = 94, .name = "bright_blue" };
     var buffer: [16]u8 = undefined;
     const ansi_code = color.toAnsiCode(&buffer);
-    
+
     try testing.expectEqualStrings("\x1b[94m", ansi_code);
 }
 
@@ -314,7 +315,7 @@ test "ColorCode.toColor creates correct Color struct" {
 test "ColorPool.init creates pool with default colors" {
     var pool = try ColorPool.init(testing.allocator);
     defer pool.deinit();
-    
+
     try testing.expect(pool.availableCount() > 0);
     try testing.expectEqual(@as(usize, 0), pool.inUseCount());
     try testing.expect(pool.hasAvailable());
@@ -323,10 +324,10 @@ test "ColorPool.init creates pool with default colors" {
 test "ColorPool.getNextColor returns available color" {
     var pool = try ColorPool.init(testing.allocator);
     defer pool.deinit();
-    
+
     const initial_available = pool.availableCount();
     const color = pool.getNextColor();
-    
+
     try testing.expect(color != null);
     try testing.expectEqual(initial_available - 1, pool.availableCount());
     try testing.expectEqual(@as(usize, 1), pool.inUseCount());
@@ -335,29 +336,29 @@ test "ColorPool.getNextColor returns available color" {
 test "ColorPool.returnColor makes color available again" {
     var pool = try ColorPool.init(testing.allocator);
     defer pool.deinit();
-    
+
     const color = pool.getNextColor() orelse return error.NoColorAvailable;
     const before_return_available = pool.availableCount();
-    
+
     try pool.returnColor(color);
-    
+
     try testing.expectEqual(before_return_available + 1, pool.availableCount());
 }
 
 test "ColorPool handles exhaustion by recycling" {
     var pool = try ColorPool.init(testing.allocator);
     defer pool.deinit();
-    
+
     // Use all available colors
     var colors = ArrayList(Color).init(testing.allocator);
     defer colors.deinit();
-    
+
     while (pool.availableCount() > 0) {
         if (pool.getNextColor()) |color| {
             try colors.append(color);
         }
     }
-    
+
     // Pool should recycle when exhausted
     const recycled = pool.getNextColor();
     try testing.expect(recycled != null);
@@ -366,7 +367,7 @@ test "ColorPool handles exhaustion by recycling" {
 test "ColorManager.init creates manager with color pool" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
-    
+
     try testing.expect(manager.color_pool.hasAvailable());
     try testing.expectEqual(@as(u32, 0), manager.getStats().total_types);
 }
@@ -374,10 +375,10 @@ test "ColorManager.init creates manager with color pool" {
 test "ColorManager.getColorForType assigns new color for new type" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
-    
+
     // Temporarily enable colors for test
     manager.setEnabled(true);
-    
+
     const color = try manager.getColorForType("text");
     try testing.expect(color != null);
     try testing.expectEqual(@as(u32, 1), manager.getStats().total_types);
@@ -387,10 +388,10 @@ test "ColorManager.getColorForType returns same color for same type" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     const color1 = try manager.getColorForType("text");
     const color2 = try manager.getColorForType("text");
-    
+
     try testing.expect(color1 != null and color2 != null);
     try testing.expectEqual(color1.?.code, color2.?.code);
     try testing.expectEqual(@as(u32, 1), manager.getStats().total_types);
@@ -400,10 +401,10 @@ test "ColorManager.getColorForType assigns different colors for different types"
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     const text_color = try manager.getColorForType("text");
     const tool_color = try manager.getColorForType("tool_use");
-    
+
     try testing.expect(text_color != null and tool_color != null);
     try testing.expect(text_color.?.code != tool_color.?.code);
     try testing.expectEqual(@as(u32, 2), manager.getStats().total_types);
@@ -413,7 +414,7 @@ test "ColorManager.getColorForType returns null when colors disabled" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(false);
-    
+
     const color = try manager.getColorForType("text");
     try testing.expect(color == null);
 }
@@ -422,11 +423,11 @@ test "ColorManager.resetColorAssignments clears all assignments" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     _ = try manager.getColorForType("text");
     _ = try manager.getColorForType("tool_use");
     try testing.expectEqual(@as(u32, 2), manager.getStats().total_types);
-    
+
     manager.resetColorAssignments();
     try testing.expectEqual(@as(u32, 0), manager.getStats().total_types);
 }
@@ -435,16 +436,16 @@ test "ColorManager.recycleUnusedColors removes inactive types" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     _ = try manager.getColorForType("text");
     _ = try manager.getColorForType("tool_use");
     _ = try manager.getColorForType("error");
     try testing.expectEqual(@as(u32, 3), manager.getStats().total_types);
-    
+
     // Only keep "text" and "error" active
     const active_types = [_][]const u8{ "text", "error" };
     try manager.recycleUnusedColors(&active_types);
-    
+
     try testing.expectEqual(@as(u32, 2), manager.getStats().total_types);
 }
 
@@ -452,17 +453,17 @@ test "ColorManager handles memory management correctly" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     // Create many type assignments
     for (0..10) |i| {
         const type_name = try std.fmt.allocPrint(testing.allocator, "type_{d}", .{i});
         defer testing.allocator.free(type_name);
-        
+
         _ = try manager.getColorForType(type_name);
     }
-    
+
     try testing.expectEqual(@as(u32, 10), manager.getStats().total_types);
-    
+
     // Reset should clean up all memory
     manager.resetColorAssignments();
     try testing.expectEqual(@as(u32, 0), manager.getStats().total_types);
@@ -472,14 +473,14 @@ test "ColorManager.getStats provides accurate information" {
     var manager = try ColorManager.init(testing.allocator);
     defer manager.deinit();
     manager.setEnabled(true);
-    
+
     const initial_stats = manager.getStats();
     try testing.expect(initial_stats.enabled);
     try testing.expectEqual(@as(u32, 0), initial_stats.total_types);
-    
+
     _ = try manager.getColorForType("text");
     _ = try manager.getColorForType("tool_use");
-    
+
     const final_stats = manager.getStats();
     try testing.expectEqual(@as(u32, 2), final_stats.total_types);
     try testing.expect(final_stats.colors_in_use >= 2);

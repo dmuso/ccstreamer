@@ -1,5 +1,5 @@
 //! JSON Formatter for CC Streamer
-//! 
+//!
 //! This module provides JSON formatting capabilities that work with the AST
 //! from the parser module. It supports:
 //! - Configurable indentation using the IndentationEngine
@@ -26,12 +26,12 @@ pub const FormatOptions = struct {
     compact_threshold: usize = 3, // Elements threshold for compact formatting
     escape_unicode: bool = true, // Whether to escape unicode characters
     sort_object_keys: bool = false, // Whether to sort object keys alphabetically
-    
+
     /// Default formatting options
     pub fn default() FormatOptions {
         return FormatOptions{};
     }
-    
+
     /// Compact formatting options
     pub fn compact() FormatOptions {
         return FormatOptions{
@@ -48,9 +48,9 @@ pub const JsonFormatter = struct {
     allocator: Allocator,
     options: FormatOptions,
     indentation_engine: IndentationEngine,
-    
+
     const Self = @This();
-    
+
     /// Initialize the JSON formatter
     pub fn init(allocator: Allocator, options: FormatOptions) Self {
         return Self{
@@ -59,7 +59,7 @@ pub const JsonFormatter = struct {
             .indentation_engine = IndentationEngine.init(allocator, options.indent_style),
         };
     }
-    
+
     /// Placeholder format function - will be implemented when integrated with parser
     pub fn formatJsonString(self: *Self, json_str: []const u8) ![]u8 {
         // For now, just apply basic indentation to demonstrate functionality
@@ -67,7 +67,7 @@ pub const JsonFormatter = struct {
         const result = try self.allocator.dupe(u8, "{\n  \"formatted\": true\n}");
         return result;
     }
-    
+
     /// Validate that formatted JSON has no trailing whitespace
     pub fn hasTrailingWhitespace(formatted: []const u8) bool {
         return IndentationEngine.hasTrailingWhitespace(undefined, formatted);
@@ -80,7 +80,7 @@ pub const JsonFormatter = struct {
 
 test "FormatOptions default values" {
     const options = FormatOptions.default();
-    
+
     try testing.expectEqual(IndentStyle.spaces_2, options.indent_style);
     try testing.expectEqual(false, options.compact_arrays);
     try testing.expectEqual(false, options.compact_objects);
@@ -91,7 +91,7 @@ test "FormatOptions default values" {
 
 test "FormatOptions compact values" {
     const options = FormatOptions.compact();
-    
+
     try testing.expectEqual(true, options.compact_arrays);
     try testing.expectEqual(true, options.compact_objects);
     try testing.expectEqual(@as(usize, 5), options.compact_threshold);
@@ -100,7 +100,7 @@ test "FormatOptions compact values" {
 test "JsonFormatter init creates formatter correctly" {
     const options = FormatOptions.default();
     var formatter = JsonFormatter.init(testing.allocator, options);
-    
+
     try testing.expectEqual(IndentStyle.spaces_2, formatter.options.indent_style);
     try testing.expectEqual(@as(u32, 0), formatter.indentation_engine.getDepth());
 }
@@ -108,10 +108,10 @@ test "JsonFormatter init creates formatter correctly" {
 test "JsonFormatter placeholder functionality" {
     const options = FormatOptions.default();
     var formatter = JsonFormatter.init(testing.allocator, options);
-    
+
     const result = try formatter.formatJsonString("{\"test\": \"value\"}");
     defer testing.allocator.free(result);
-    
+
     try testing.expectEqualStrings("{\n  \"formatted\": true\n}", result);
 }
 
@@ -119,7 +119,7 @@ test "JsonFormatter hasTrailingWhitespace detection" {
     // No trailing whitespace
     try testing.expect(!JsonFormatter.hasTrailingWhitespace("{\"test\": \"value\"}"));
     try testing.expect(!JsonFormatter.hasTrailingWhitespace("[]"));
-    
+
     // Has trailing whitespace
     try testing.expect(JsonFormatter.hasTrailingWhitespace("{\"test\": \"value\"} "));
     try testing.expect(JsonFormatter.hasTrailingWhitespace("{\n  \"test\": \"value\" \n}"));

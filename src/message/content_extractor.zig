@@ -42,11 +42,11 @@ pub const ExtractionResult = struct {
 
     /// Types of extracted content
     pub const ContentType = enum {
-        text,           // String content
-        json_object,    // Formatted JSON object
-        json_array,     // Formatted JSON array  
-        metadata,       // Fallback metadata content
-        empty,          // No content found
+        text, // String content
+        json_object, // Formatted JSON object
+        json_array, // Formatted JSON array
+        metadata, // Fallback metadata content
+        empty, // No content found
     };
 
     pub fn deinit(self: *ExtractionResult, allocator: Allocator) void {
@@ -109,7 +109,7 @@ pub const ContentExtractor = struct {
             },
             else => {
                 return self.createEmptyResult();
-            }
+            },
         }
     }
 
@@ -117,7 +117,7 @@ pub const ContentExtractor = struct {
     fn extractMessageContent(self: *Self, obj: json.ObjectMap) !ExtractionResult {
         // Look for message field
         const message_value = obj.get("message") orelse return ContentExtractionError.MissingContent;
-        
+
         switch (message_value) {
             .object => |message_obj| {
                 // Extract content field from message object
@@ -144,7 +144,7 @@ pub const ContentExtractor = struct {
                 // Join array elements with newlines
                 var content_parts = ArrayList([]const u8).init(self.allocator);
                 defer content_parts.deinit();
-                
+
                 // Track allocated strings that need to be freed
                 var allocated_strings = ArrayList([]const u8).init(self.allocator);
                 defer {
@@ -162,7 +162,7 @@ pub const ContentExtractor = struct {
                             const json_str = try self.valueToJsonString(item);
                             try allocated_strings.append(json_str);
                             try content_parts.append(json_str);
-                        }
+                        },
                     }
                 }
 
@@ -190,7 +190,7 @@ pub const ContentExtractor = struct {
                 var result = try self.createTextResult(str, false);
                 result.original_type = try self.extractOriginalType(original_obj);
                 return result;
-            }
+            },
         }
     }
 
@@ -224,7 +224,7 @@ pub const ContentExtractor = struct {
                         result.original_type = try self.extractOriginalType(obj);
                         return result;
                     },
-                    else => {}
+                    else => {},
                 }
             }
         }
@@ -245,18 +245,18 @@ pub const ContentExtractor = struct {
                     const type_info = try std.fmt.allocPrint(self.allocator, "[{s}]", .{type_str});
                     try metadata_parts.append(type_info);
                 },
-                else => {}
+                else => {},
             }
         }
 
-        // Include timestamp if present  
+        // Include timestamp if present
         if (obj.get("timestamp")) |ts_value| {
             switch (ts_value) {
                 .string => |ts_str| {
                     const ts_info = try std.fmt.allocPrint(self.allocator, "at {s}", .{ts_str});
                     try metadata_parts.append(ts_info);
                 },
-                else => {}
+                else => {},
             }
         }
 
@@ -267,7 +267,7 @@ pub const ContentExtractor = struct {
         }
 
         const metadata = try std.mem.join(self.allocator, " ", metadata_parts.items);
-        
+
         // Clean up individual parts
         for (metadata_parts.items) |part| {
             self.allocator.free(part);
@@ -359,7 +359,7 @@ pub const ContentExtractor = struct {
         const options = json.StringifyOptions{
             .whitespace = .indent_tab,
         };
-        
+
         try json.stringify(value, options, string.writer());
         return try string.toOwnedSlice();
     }
@@ -372,7 +372,7 @@ pub const ContentExtractor = struct {
 test "ContentExtractor.init creates extractor with config" {
     const config = ContentExtractionConfig{};
     const extractor = ContentExtractor.init(testing.allocator, config);
-    
+
     try testing.expectEqual(config.max_content_length, extractor.config.max_content_length);
     try testing.expect(extractor.config.include_metadata_fallback);
 }
@@ -380,14 +380,14 @@ test "ContentExtractor.init creates extractor with config" {
 test "ContentExtractor.extractFromJsonString handles valid Claude Code message" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"text","message":{"content":"Hello, I'll help you with that task.\nLet me check the files."},"timestamp":"2024-01-01T00:00:00Z"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqualStrings("Hello, I'll help you with that task.\nLet me check the files.", result.content);
     try testing.expectEqual(ExtractionResult.ContentType.text, result.content_type);
     try testing.expect(!result.fallback_used);
@@ -397,14 +397,14 @@ test "ContentExtractor.extractFromJsonString handles valid Claude Code message" 
 test "ContentExtractor.extractFromJsonString handles missing message field" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"error","error":"Something went wrong","timestamp":"2024-01-01T00:00:00Z"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ExtractionResult.ContentType.metadata, result.content_type);
     try testing.expect(result.fallback_used);
     try testing.expect(std.mem.indexOf(u8, result.content, "[error]") != null);
@@ -413,14 +413,14 @@ test "ContentExtractor.extractFromJsonString handles missing message field" {
 test "ContentExtractor.extractFromJsonString handles direct string message" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"status","message":"Process completed successfully"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqualStrings("Process completed successfully", result.content);
     try testing.expectEqual(ExtractionResult.ContentType.text, result.content_type);
     try testing.expect(!result.fallback_used);
@@ -429,14 +429,14 @@ test "ContentExtractor.extractFromJsonString handles direct string message" {
 test "ContentExtractor.extractFromJsonString handles array content" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"list","message":{"content":["Item 1","Item 2","Item 3"]}}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqualStrings("Item 1\nItem 2\nItem 3", result.content);
     try testing.expectEqual(ExtractionResult.ContentType.json_array, result.content_type);
 }
@@ -444,14 +444,14 @@ test "ContentExtractor.extractFromJsonString handles array content" {
 test "ContentExtractor.extractFromJsonString handles object content" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"data","message":{"content":{"key":"value","number":42}}}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ExtractionResult.ContentType.json_object, result.content_type);
     try testing.expect(std.mem.indexOf(u8, result.content, "key") != null);
     try testing.expect(std.mem.indexOf(u8, result.content, "value") != null);
@@ -460,9 +460,9 @@ test "ContentExtractor.extractFromJsonString handles object content" {
 test "ContentExtractor.extractFromJsonString handles malformed JSON" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
+
     const json_input = "invalid json {";
-    
+
     const result = extractor.extractFromJsonString(json_input);
     try testing.expectError(ContentExtractionError.InvalidJson, result);
 }
@@ -470,14 +470,14 @@ test "ContentExtractor.extractFromJsonString handles malformed JSON" {
 test "ContentExtractor.extractFromJsonString with max_content_length truncates" {
     const config = ContentExtractionConfig{ .max_content_length = 10 };
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"message":{"content":"This is a very long message that should be truncated"}}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(@as(usize, 13), result.content.len); // 10 chars + "..."
     try testing.expect(std.mem.endsWith(u8, result.content, "..."));
 }
@@ -485,14 +485,14 @@ test "ContentExtractor.extractFromJsonString with max_content_length truncates" 
 test "ContentExtractor.extractFromJsonString with fallback disabled returns empty" {
     const config = ContentExtractionConfig{ .include_metadata_fallback = false };
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"error","error":"Something went wrong"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ExtractionResult.ContentType.empty, result.content_type);
     try testing.expectEqualStrings("", result.content);
 }
@@ -500,14 +500,14 @@ test "ContentExtractor.extractFromJsonString with fallback disabled returns empt
 test "ContentExtractor.extractFromJsonString handles nested message structure" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"tool_result","message":{"content":{"result":"Success","details":"Operation completed"}}}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ExtractionResult.ContentType.json_object, result.content_type);
     try testing.expect(std.mem.indexOf(u8, result.content, "Success") != null);
     try testing.expect(std.mem.indexOf(u8, result.content, "details") != null);
@@ -516,14 +516,14 @@ test "ContentExtractor.extractFromJsonString handles nested message structure" {
 test "ContentExtractor handles fallback field extraction" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"custom","text":"Fallback content here"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqualStrings("Fallback content here", result.content);
     try testing.expectEqual(ExtractionResult.ContentType.text, result.content_type);
     try testing.expect(result.fallback_used);
@@ -532,14 +532,14 @@ test "ContentExtractor handles fallback field extraction" {
 test "ContentExtractor metadata result includes type and timestamp" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
-    const json_input = 
+
+    const json_input =
         \\{"type":"status","timestamp":"2024-01-01T12:00:00Z","data":"some data"}
     ;
-    
+
     var result = try extractor.extractFromJsonString(json_input);
     defer result.deinit(testing.allocator);
-    
+
     try testing.expectEqual(ExtractionResult.ContentType.metadata, result.content_type);
     try testing.expect(std.mem.indexOf(u8, result.content, "[status]") != null);
     try testing.expect(std.mem.indexOf(u8, result.content, "2024-01-01T12:00:00Z") != null);
@@ -548,25 +548,25 @@ test "ContentExtractor metadata result includes type and timestamp" {
 test "ContentExtractor handles different JSON value types" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
+
     // Number content
-    const json_number = 
+    const json_number =
         \\{"message":{"content":42}}
     ;
     var result_num = try extractor.extractFromJsonString(json_number);
     defer result_num.deinit(testing.allocator);
     try testing.expectEqualStrings("42", result_num.content);
-    
+
     // Boolean content
-    const json_bool = 
+    const json_bool =
         \\{"message":{"content":true}}
     ;
     var result_bool = try extractor.extractFromJsonString(json_bool);
     defer result_bool.deinit(testing.allocator);
     try testing.expectEqualStrings("true", result_bool.content);
-    
+
     // Null content
-    const json_null = 
+    const json_null =
         \\{"message":{"content":null}}
     ;
     var result_null = try extractor.extractFromJsonString(json_null);
@@ -577,13 +577,13 @@ test "ContentExtractor handles different JSON value types" {
 test "ContentExtractor memory management with multiple extractions" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
+
     const json_inputs = [_][]const u8{
         \\{"type":"text","message":{"content":"First message"}}\\,
         \\{"type":"tool","message":{"content":"Second message"}}\\,
         \\{"type":"error","message":{"content":"Third message"}}\\,
     };
-    
+
     var results = ArrayList(ExtractionResult).init(testing.allocator);
     defer {
         for (results.items) |*result| {
@@ -591,12 +591,12 @@ test "ContentExtractor memory management with multiple extractions" {
         }
         results.deinit();
     }
-    
+
     for (json_inputs) |json_input| {
         const result = try extractor.extractFromJsonString(json_input);
         try results.append(result);
     }
-    
+
     try testing.expectEqual(@as(usize, 3), results.items.len);
     for (results.items) |result| {
         try testing.expect(result.content.len > 0);
@@ -607,17 +607,17 @@ test "ContentExtractor memory management with multiple extractions" {
 test "ContentExtractor edge cases" {
     const config = ContentExtractionConfig{};
     var extractor = ContentExtractor.init(testing.allocator, config);
-    
+
     // Empty JSON object
     var result_empty = try extractor.extractFromJsonString("{}");
     defer result_empty.deinit(testing.allocator);
     try testing.expectEqual(ExtractionResult.ContentType.metadata, result_empty.content_type);
-    
+
     // JSON array input
     var result_array = try extractor.extractFromJsonString("[1,2,3]");
     defer result_array.deinit(testing.allocator);
     try testing.expectEqual(ExtractionResult.ContentType.empty, result_array.content_type);
-    
+
     // Simple string input
     var result_string = try extractor.extractFromJsonString("\"simple string\"");
     defer result_string.deinit(testing.allocator);

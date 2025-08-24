@@ -17,7 +17,7 @@ pub const indentation = @import("formatter/indentation.zig");
 pub const json_formatter = @import("formatter/json_formatter.zig");
 pub const colors = @import("formatter/colors.zig");
 
-// v2 Message processing modules  
+// v2 Message processing modules
 pub const color_manager = @import("colorizer/color_manager.zig");
 pub const content_extractor = @import("message/content_extractor.zig");
 pub const escape_renderer = @import("message/escape_renderer.zig");
