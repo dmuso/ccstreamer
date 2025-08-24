@@ -1,8 +1,8 @@
 # CC Streamer
 
-[![CI](https://github.com/dmuso/cc-streamer/actions/workflows/ci.yml/badge.svg)](https://github.com/dmuso/cc-streamer/actions/workflows/ci.yml)
-[![Release](https://github.com/dmuso/cc-streamer/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/dmuso/cc-streamer/actions/workflows/build-and-release.yml)
-[![License](https://img.shields.io/github/license/dmuso/cc-streamer)](LICENSE)
+[![CI](https://github.com/dmuso/ccstreamer/actions/workflows/ci.yml/badge.svg)](https://github.com/dmuso/ccstreamer/actions/workflows/ci.yml)
+[![Release](https://github.com/dmuso/ccstreamer/actions/workflows/build-and-release.yml/badge.svg)](https://github.com/dmuso/ccstreamer/actions/workflows/build-and-release.yml)
+[![License](https://img.shields.io/github/license/dmuso/ccstreamer)](LICENSE)
 
 CC Streamer is a CLI app that accepts streamed JSON output from Claude Code and formats it for your terminal so it's nice and easy to read.
 
@@ -10,7 +10,7 @@ CC Streamer is a CLI app that accepts streamed JSON output from Claude Code and 
 
 ### Download Pre-built Binaries
 
-Download the latest release for your platform from the [Releases page](https://github.com/dmuso/cc-streamer/releases).
+Download the latest release for your platform from the [Releases page](https://github.com/dmuso/ccstreamer/releases).
 
 #### Linux/macOS
 ```bash
@@ -33,8 +33,8 @@ Requirements:
 - Zig 0.13.0 or later
 
 ```bash
-git clone https://github.com/dmuso/cc-streamer.git
-cd cc-streamer
+git clone https://github.com/dmuso/ccstreamer.git
+cd ccstreamer
 zig build -Doptimize=ReleaseSafe
 
 # Binary will be in zig-out/bin/ccstreamer
@@ -85,7 +85,7 @@ zig build -Dtarget=x86_64-windows -Doptimize=ReleaseSafe
 ./scripts/release.sh patch  # or minor/major
 
 # Push to trigger automated release
-git push origin main
+git push origin master
 git push origin v0.1.0  # Replace with your version
 ```
 
@@ -114,5 +114,5 @@ This project uses GitHub Actions for continuous integration and deployment:
 
 ## License
 
-[Add your license here]
+MIT
 
