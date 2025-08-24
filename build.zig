@@ -1,7 +1,7 @@
 const std = @import("std");
 
 // Version information
-const version = "0.1.10";
+const version = "0.1.11";
 
 // macOS Build Note:
 // If you encounter code signing issues on macOS (especially for notarization),
