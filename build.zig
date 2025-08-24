@@ -3,13 +3,6 @@ const std = @import("std");
 // Version information
 const version = "0.1.11";
 
-// macOS Build Note:
-// If you encounter code signing issues on macOS (especially for notarization),
-// set the ZIG_SYSTEM_LINKER_HACK=1 environment variable to use Apple's system
-// linker which properly handles header padding for code signatures:
-//   export ZIG_SYSTEM_LINKER_HACK=1
-//   zig build --release=fast
-
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -74,6 +67,10 @@ pub fn build(b: *std.Build) void {
         .name = "ccstreamer",
         .root_module = exe_mod,
     });
+
+    // Critical for macOS: Reserve space for code signing
+    // This ensures proper header padding for notarization
+    exe.headerpad_max_install_names = true;
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
