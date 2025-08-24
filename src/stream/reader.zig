@@ -251,7 +251,7 @@ test "StreamReader buffer management" {
     
     // Create lines with incremental content
     for (0..100) |i| {
-        try large_data.writer().print("This is line number {} with some additional content\n", .{i});
+        try large_data.writer().print("This is line number {d} with some additional content\n", .{i});
     }
     
     var stream = std.io.fixedBufferStream(large_data.items);

@@ -556,7 +556,7 @@ test "ColorFormatter memory management" {
     
     // Generate multiple colored strings
     for (0..10) |i| {
-        const text = try std.fmt.allocPrint(testing.allocator, "text{}", .{i});
+        const text = try std.fmt.allocPrint(testing.allocator, "text{d}", .{i});
         defer testing.allocator.free(text);
         
         const colored = try formatter.colorizeString(text);

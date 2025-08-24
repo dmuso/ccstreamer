@@ -1,5 +1,5 @@
 //! CC Streamer Library Root
-//! Main library interface for the CC Streamer JSON formatting tool
+//! Main library interface for the CC Streamer v2 JSON message formatting tool
 const std = @import("std");
 const testing = std.testing;
 
@@ -12,10 +12,16 @@ pub const tokenizer = @import("parser/tokenizer.zig");
 pub const stream_reader = @import("stream/reader.zig");
 pub const boundary_detector = @import("stream/boundary_detector.zig");
 
-// Formatter modules
+// Legacy formatter modules (v1 compatibility)
 pub const indentation = @import("formatter/indentation.zig");
 pub const json_formatter = @import("formatter/json_formatter.zig");
 pub const colors = @import("formatter/colors.zig");
+
+// v2 Message processing modules  
+pub const color_manager = @import("colorizer/color_manager.zig");
+pub const content_extractor = @import("message/content_extractor.zig");
+pub const escape_renderer = @import("message/escape_renderer.zig");
+pub const type_formatters = @import("message/type_formatters.zig");
 
 // Utility modules
 pub const allocator_utils = @import("utils/allocator.zig");

@@ -91,7 +91,7 @@ pub const TestDataGenerator = struct {
         
         for (0..element_count) |i| {
             if (i > 0) try result.appendSlice(", ");
-            try result.writer().print("{}", .{i});
+            try result.writer().print("{d}", .{i});
         }
         
         try result.append(']');
@@ -121,7 +121,7 @@ pub const TestDataGenerator = struct {
         
         for (0..field_count) |i| {
             if (i > 0) try result.appendSlice(", ");
-            try result.writer().print("\"field{}\": \"value{}\"", .{ i, i });
+            try result.writer().print("\"field{d}\": \"value{d}\"", .{ i, i });
         }
         
         try result.append('}');
@@ -135,7 +135,7 @@ pub const TestDataGenerator = struct {
         errdefer result.deinit();
         
         for (0..line_count) |i| {
-            try result.writer().print("{{\"line\": {}, \"data\": \"test{}\"}}\n", .{ i, i });
+            try result.writer().print("{{\"line\": {d}, \"data\": \"test{d}\"}}\n", .{ i, i });
         }
         
         return try result.toOwnedSlice();
