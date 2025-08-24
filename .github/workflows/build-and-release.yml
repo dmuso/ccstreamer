@@ -3,44 +3,70 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+    - 'v*.*.*' # Trigger on version tags like v1.0.0
   pull_request:
     branches: [ master ]
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
+    # Allow manual triggering
 
 env:
-  ZIG_VERSION: 0.14.1  # Update to match your Zig version
+  ZIG_VERSION: 0.14.1 # Update to match your Zig version
 
 jobs:
   build:
     name: Build - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    environment: ci
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-linux
-            artifact_name: ccstreamer-linux-x86_64
-            archive_ext: tar.gz
-          - os: macos-latest
-            target: x86_64-macos
-            artifact_name: ccstreamer-macos-x86_64
-            archive_ext: tar.gz
-          - os: macos-latest
-            target: aarch64-macos
-            artifact_name: ccstreamer-macos-arm64
-            archive_ext: tar.gz
-          - os: windows-latest
-            target: x86_64-windows
-            artifact_name: ccstreamer-windows-x86_64
-            archive_ext: zip
+        - os: ubuntu-latest
+          target: x86_64-linux
+          artifact_name: ccstreamer-linux-x86_64
+          archive_ext: tar.gz
+        - os: ubuntu-latest
+          target: aarch64-linux
+          artifact_name: ccstreamer-linux-arm64
+          archive_ext: tar.gz
+        - os: macos-latest
+          target: x86_64-macos
+          artifact_name: ccstreamer-macos-x86_64
+          archive_ext: tar.gz
+        - os: macos-latest
+          target: aarch64-macos
+          artifact_name: ccstreamer-macos-arm64
+          archive_ext: tar.gz
+        - os: windows-latest
+          target: x86_64-windows
+          artifact_name: ccstreamer-windows-x86_64
+          archive_ext: zip
+
+    env:
+      # The base64 of the contents of your '.p12' key.
+      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+
+      # The password to open the '.p12' key.
+      MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+
+      # The base64 of the contents of your '.p8' key.
+      MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+
+      # The ID of the '.p8' key.
+      # You can find it in the filename, as well as the Apple Developer Portal
+      # website.
+      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+
+      # The issuer UUID.
+      # You can find it in the Apple Developer Portal website.
+      MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
       with:
-        fetch-depth: 0  # Fetch all history for version determination
+        fetch-depth: 0 # Fetch all history for version determination
 
     - name: Setup Zig
       uses: goto-bus-stop/setup-zig@v2
@@ -64,166 +90,15 @@ jobs:
         zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
 
     - name: Run tests (native platform only)
-      if: matrix.target == 'x86_64-linux' || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-macos') || matrix.target == 'x86_64-windows'
+      if: (matrix.target == 'x86_64-linux' && matrix.target == 'aarch64-linux') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-macos') || matrix.target == 'x86_64-windows'
       run: |
         zig build test
 
-    - name: Prepare artifacts (Unix)
-      if: runner.os != 'Windows'
-      run: |
-        mkdir -p dist
-        cp zig-out/bin/ccstreamer dist/
-        cp README.md dist/ 2>/dev/null || echo "No README.md found"
-        cp LICENSE dist/ 2>/dev/null || echo "No LICENSE found"
-        
-        # Create version file
-        echo "${{ steps.get_version.outputs.VERSION }}" > dist/VERSION
-        
-        # Make binary executable
-        chmod +x dist/ccstreamer
-        
-        # Create archive
-        cd dist
-        tar -czf ../${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.tar.gz *
-        cd ..
-
-    - name: Prepare artifacts (Windows)
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        New-Item -ItemType Directory -Force -Path dist
-        Copy-Item zig-out/bin/ccstreamer.exe dist/
-        if (Test-Path README.md) { Copy-Item README.md dist/ }
-        if (Test-Path LICENSE) { Copy-Item LICENSE dist/ }
-        
-        # Create version file
-        Set-Content -Path dist/VERSION -Value "${{ steps.get_version.outputs.VERSION }}"
-        
-        # Create archive
-        Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.zip"
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v6
       with:
-        name: ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}
-        path: |
-          ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.${{ matrix.archive_ext }}
-        retention-days: 7
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    permissions:
-      contents: write
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
-
-    - name: Get version
-      id: get_version
-      run: |
-        VERSION=${GITHUB_REF#refs/tags/}
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "Creating release for version: $VERSION"
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v5
-      with:
-        path: artifacts/
-
-    - name: List artifacts
-      run: |
-        echo "Downloaded artifacts:"
-        ls -la artifacts/
-
-    - name: Generate release notes
-      id: release_notes
-      run: |
-        cat << EOF > release_notes.md
-        ## CC Streamer ${{ steps.get_version.outputs.VERSION }}
-        
-        ### 📦 Downloads
-        
-        | Platform | Architecture | Download |
-        |----------|--------------|----------|
-        | Linux | x86_64 | ccstreamer-linux-x86_64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
-        | macOS | x86_64 (Intel) | ccstreamer-macos-x86_64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
-        | macOS | ARM64 (Apple Silicon) | ccstreamer-macos-arm64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
-        | Windows | x86_64 | ccstreamer-windows-x86_64-${{ steps.get_version.outputs.VERSION }}.zip |
-        
-        ### 🚀 Installation
-        
-        #### Linux/macOS
-        \`\`\`bash
-        # Download and extract
-        tar -xzf ccstreamer-<platform>-<arch>-${{ steps.get_version.outputs.VERSION }}.tar.gz
-        
-        # Make executable (if needed)
-        chmod +x ccstreamer
-        
-        # Move to PATH
-        sudo mv ccstreamer /usr/local/bin/
-        \`\`\`
-        
-        #### Windows
-        1. Download the Windows zip file
-        2. Extract the contents
-        3. Add the directory to your PATH or move ccstreamer.exe to a directory in your PATH
-        
-        ### 🎯 Usage
-        
-        Pipe Claude Code output through ccstreamer:
-        \`\`\`bash
-        claude-code <command> | ccstreamer
-        \`\`\`
-        
-        ### 📝 Changes
-        
-        See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.VERSION }}/CHANGELOG.md) for details.
-        
-        ### 🔧 Requirements
-        
-        - Terminal with ANSI color support
-        - UTF-8 encoding support
-        
-        EOF
-
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        name: CC Streamer ${{ steps.get_version.outputs.VERSION }}
-        body_path: release_notes.md
-        draft: false
-        prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
-        files: |
-          artifacts/*/*
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Generate checksums
-      run: |
-        cd artifacts
-        for dir in */; do
-          for file in "$dir"*; do
-            if [[ -f "$file" ]]; then
-              sha256sum "$file" | awk '{print $1 "  " substr($2, index($2, "/")+1)}' >> ../checksums.txt
-            fi
-          done
-        done
-        cd ..
-        echo "### SHA256 Checksums" >> checksums.md
-        echo '```' >> checksums.md
-        cat checksums.txt >> checksums.md
-        echo '```' >> checksums.md
-
-    - name: Upload checksums to release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: checksums.txt
-        body_path: checksums.md
-        append_body: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # either 'goreleaser' (default) or 'goreleaser-pro'
+        distribution: goreleaser
+        # 'latest', 'nightly', or a semver
+        version: "~> v2"
+        args: release --clean

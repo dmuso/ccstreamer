@@ -40,7 +40,7 @@ sudo mv ccstreamer /usr/local/bin/
 ### Build from Source
 
 Requirements:
-- Zig 0.13.0 or later
+- Zig 0.14.1 or later
 
 ```bash
 git clone https://github.com/dmuso/ccstreamer.git
