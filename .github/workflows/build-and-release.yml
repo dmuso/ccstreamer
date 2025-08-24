@@ -130,7 +130,7 @@ jobs:
         echo "Creating release for version: $VERSION"
 
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: artifacts/
 
