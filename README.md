@@ -6,6 +6,16 @@
 
 CC Streamer is a CLI app that accepts streamed JSON output from Claude Code and formats it for your terminal so it's nice and easy to read.
 
+## Example Ouput
+
+### Before CC Streamer
+
+![Before CC Streamer](https://github.com/dmuso/ccstreamer/docs/before-ccstreamer.png)
+
+### After CC Streamer
+
+![After CC Streamer](https://github.com/dmuso/ccstreamer/docs/after-ccstreamer.png)
+
 ## Installation
 
 ### Download Pre-built Binaries
