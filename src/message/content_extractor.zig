@@ -136,7 +136,9 @@ pub const ContentExtractor = struct {
     fn extractContentValue(self: *Self, content_value: json.Value, original_obj: json.ObjectMap) !ExtractionResult {
         switch (content_value) {
             .string => |str| {
-                return self.createTextResult(str, false);
+                var result = try self.createTextResult(str, false);
+                result.original_type = try self.extractOriginalType(original_obj);
+                return result;
             },
             .array => |arr| {
                 // Join array elements with newlines
@@ -185,7 +187,9 @@ pub const ContentExtractor = struct {
             else => {
                 // Convert other types to string
                 const str = try self.valueToString(content_value);
-                return self.createTextResult(str, false);
+                var result = try self.createTextResult(str, false);
+                result.original_type = try self.extractOriginalType(original_obj);
+                return result;
             }
         }
     }
@@ -201,16 +205,24 @@ pub const ContentExtractor = struct {
         for (fallback_fields) |field| {
             if (obj.get(field)) |value| {
                 switch (value) {
-                    .string => |str| return self.createTextResult(str, true),
+                    .string => |str| {
+                        var result = try self.createTextResult(str, true);
+                        result.original_type = try self.extractOriginalType(obj);
+                        return result;
+                    },
                     .integer, .float, .bool => {
                         const str = try self.valueToString(value);
                         defer self.allocator.free(str);
-                        return self.createTextResult(str, true);
+                        var result = try self.createTextResult(str, true);
+                        result.original_type = try self.extractOriginalType(obj);
+                        return result;
                     },
                     .object, .array => {
                         const formatted = try self.valueToJsonString(value);
                         defer self.allocator.free(formatted);
-                        return self.createTextResult(formatted, true);
+                        var result = try self.createTextResult(formatted, true);
+                        result.original_type = try self.extractOriginalType(obj);
+                        return result;
                     },
                     else => {}
                 }

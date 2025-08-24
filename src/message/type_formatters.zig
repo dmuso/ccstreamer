@@ -206,13 +206,14 @@ pub const ErrorFormatter = struct {
     fn formatImpl(base: *MessageFormatter, context: *FormatContext, extraction_result: ExtractionResult) FormatError!FormatResult {
         _ = base;
         
-        // Always use red for errors (reserved color)
-        const red_color = Color{ .code = 31, .name = "red" }; // ANSI red
+        // Always use red for errors (reserved color) but register with ColorManager for stats
+        _ = try context.color_manager.getColorForType("error"); // Register for stats
+        const error_color = Color{ .code = 31, .name = "red" };
         
         // Create error type indicator
         var type_indicator: ?[]u8 = null;
         if (context.config.show_type_indicators) {
-            type_indicator = try applyColorToContent(context.allocator, "[ERROR]", red_color);
+            type_indicator = try applyColorToContent(context.allocator, "[ERROR]", error_color);
         }
         errdefer if (type_indicator) |ind| context.allocator.free(ind);
         
@@ -220,8 +221,8 @@ pub const ErrorFormatter = struct {
         const rendered_content = try context.escape_renderer.renderEscapeSequences(extraction_result.content);
         errdefer context.allocator.free(rendered_content);
         
-        // Apply red coloring to content as well
-        const colored_content = try applyColorToContent(context.allocator, rendered_content, red_color);
+        // Apply error coloring to content as well
+        const colored_content = try applyColorToContent(context.allocator, rendered_content, error_color);
         context.allocator.free(rendered_content);
         
         // Format with error indicator
@@ -241,7 +242,7 @@ pub const ErrorFormatter = struct {
             .formatted_content = final_content,
             .type_indicator = type_indicator,
             .message_type = try context.allocator.dupe(u8, "error"),
-            .color_used = red_color,
+            .color_used = error_color,
             .lines_count = countLines(final_content),
         };
     }
@@ -262,23 +263,23 @@ pub const StatusFormatter = struct {
     fn formatImpl(base: *MessageFormatter, context: *FormatContext, extraction_result: ExtractionResult) FormatError!FormatResult {
         _ = base;
         
-        // Use gray/dim color for status messages
-        const dim_color = Color{ .code = 90, .name = "gray" }; // ANSI gray
+        // Get color from ColorManager, but default to gray for status messages
+        const status_color = (try context.color_manager.getColorForType("status")) orelse Color{ .code = 90, .name = "gray" };
         
         // Render escape sequences
         const rendered_content = try context.escape_renderer.renderEscapeSequences(extraction_result.content);
         errdefer context.allocator.free(rendered_content);
         
-        // Apply dimmed coloring
-        const dimmed_content = try applyColorToContent(context.allocator, rendered_content, dim_color);
+        // Apply status coloring
+        const colored_content = try applyColorToContent(context.allocator, rendered_content, status_color);
         context.allocator.free(rendered_content);
         
         return FormatResult{
-            .formatted_content = dimmed_content,
+            .formatted_content = colored_content,
             .type_indicator = null, // Status messages are minimal
             .message_type = try context.allocator.dupe(u8, "status"),
-            .color_used = dim_color,
-            .lines_count = countLines(dimmed_content),
+            .color_used = status_color,
+            .lines_count = countLines(colored_content),
         };
     }
 };
