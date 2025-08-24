@@ -1,5 +1,8 @@
 const std = @import("std");
 
+// Version information
+const version = "0.1.0";
+
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.

@@ -1,0 +1,229 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  ZIG_VERSION: 0.13.0  # Update to match your Zig version
+
+jobs:
+  build:
+    name: Build - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+            artifact_name: ccstreamer-linux-x86_64
+            archive_ext: tar.gz
+          - os: macos-latest
+            target: x86_64-macos
+            artifact_name: ccstreamer-macos-x86_64
+            archive_ext: tar.gz
+          - os: macos-latest
+            target: aarch64-macos
+            artifact_name: ccstreamer-macos-arm64
+            archive_ext: tar.gz
+          - os: windows-latest
+            target: x86_64-windows
+            artifact_name: ccstreamer-windows-x86_64
+            archive_ext: zip
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for version determination
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: ${{ env.ZIG_VERSION }}
+
+    - name: Get version
+      id: get_version
+      shell: bash
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION="dev-$(git rev-parse --short HEAD)"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building version: $VERSION"
+
+    - name: Build for ${{ matrix.target }}
+      run: |
+        zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
+
+    - name: Run tests (native platform only)
+      if: matrix.target == 'x86_64-linux' || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-macos') || matrix.target == 'x86_64-windows'
+      run: |
+        zig build test
+
+    - name: Prepare artifacts (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        mkdir -p dist
+        cp zig-out/bin/ccstreamer dist/
+        cp README.md dist/ 2>/dev/null || echo "No README.md found"
+        cp LICENSE dist/ 2>/dev/null || echo "No LICENSE found"
+        
+        # Create version file
+        echo "${{ steps.get_version.outputs.VERSION }}" > dist/VERSION
+        
+        # Make binary executable
+        chmod +x dist/ccstreamer
+        
+        # Create archive
+        cd dist
+        tar -czf ../${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.tar.gz *
+        cd ..
+
+    - name: Prepare artifacts (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Force -Path dist
+        Copy-Item zig-out/bin/ccstreamer.exe dist/
+        if (Test-Path README.md) { Copy-Item README.md dist/ }
+        if (Test-Path LICENSE) { Copy-Item LICENSE dist/ }
+        
+        # Create version file
+        Set-Content -Path dist/VERSION -Value "${{ steps.get_version.outputs.VERSION }}"
+        
+        # Create archive
+        Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.zip"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}
+        path: |
+          ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.${{ matrix.archive_ext }}
+        retention-days: 7
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get version
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Creating release for version: $VERSION"
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: List artifacts
+      run: |
+        echo "Downloaded artifacts:"
+        ls -la artifacts/
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        cat << EOF > release_notes.md
+        ## CC Streamer ${{ steps.get_version.outputs.VERSION }}
+        
+        ### 📦 Downloads
+        
+        | Platform | Architecture | Download |
+        |----------|--------------|----------|
+        | Linux | x86_64 | ccstreamer-linux-x86_64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
+        | macOS | x86_64 (Intel) | ccstreamer-macos-x86_64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
+        | macOS | ARM64 (Apple Silicon) | ccstreamer-macos-arm64-${{ steps.get_version.outputs.VERSION }}.tar.gz |
+        | Windows | x86_64 | ccstreamer-windows-x86_64-${{ steps.get_version.outputs.VERSION }}.zip |
+        
+        ### 🚀 Installation
+        
+        #### Linux/macOS
+        \`\`\`bash
+        # Download and extract
+        tar -xzf ccstreamer-<platform>-<arch>-${{ steps.get_version.outputs.VERSION }}.tar.gz
+        
+        # Make executable (if needed)
+        chmod +x ccstreamer
+        
+        # Move to PATH
+        sudo mv ccstreamer /usr/local/bin/
+        \`\`\`
+        
+        #### Windows
+        1. Download the Windows zip file
+        2. Extract the contents
+        3. Add the directory to your PATH or move ccstreamer.exe to a directory in your PATH
+        
+        ### 🎯 Usage
+        
+        Pipe Claude Code output through ccstreamer:
+        \`\`\`bash
+        claude-code <command> | ccstreamer
+        \`\`\`
+        
+        ### 📝 Changes
+        
+        See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ steps.get_version.outputs.VERSION }}/CHANGELOG.md) for details.
+        
+        ### 🔧 Requirements
+        
+        - Terminal with ANSI color support
+        - UTF-8 encoding support
+        
+        EOF
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: CC Streamer ${{ steps.get_version.outputs.VERSION }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+        files: |
+          artifacts/*/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate checksums
+      run: |
+        cd artifacts
+        for dir in */; do
+          for file in "$dir"*; do
+            if [[ -f "$file" ]]; then
+              sha256sum "$file" | awk '{print $1 "  " substr($2, index($2, "/")+1)}' >> ../checksums.txt
+            fi
+          done
+        done
+        cd ..
+        echo "### SHA256 Checksums" >> checksums.md
+        echo '```' >> checksums.md
+        cat checksums.txt >> checksums.md
+        echo '```' >> checksums.md
+
+    - name: Upload checksums to release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: checksums.txt
+        body_path: checksums.md
+        append_body: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

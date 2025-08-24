@@ -1,0 +1,18 @@
+# Changelog
+
+All notable changes to ccstreamer will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 24th August 2025
+
+### Added
+- Initial release of ccstreamer
+- Basic JSON streaming support
+- Message type detection and formatting
+- Color management with ANSI escape sequences
+- Content extraction from Claude Code JSON format
+- Support for text, error, tool_use, tool_result, and status message types
+- Cross-platform support (Linux, macOS, Windows)
+- Comprehensive test suite

@@ -17,7 +17,7 @@
 
 **Description**: Define color structures and enums for ANSI color codes
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/colorizer/color_manager.zig`
+**Implementation**: `/cc-streamer/src/colorizer/color_manager.zig`
 
 **Subtasks**: ✅ All completed
 1. ✅ Define Color struct with ANSI code field
@@ -45,7 +45,7 @@
 
 **Description**: Create a pool of available colors for assignment
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/colorizer/color_manager.zig`
+**Implementation**: `/cc-streamer/src/colorizer/color_manager.zig`
 
 **Subtasks**: ✅ All completed
 1. ✅ Create ColorPool struct
@@ -76,7 +76,7 @@
 
 **Description**: Implement the main color management system
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/colorizer/color_manager.zig`
+**Implementation**: `/cc-streamer/src/colorizer/color_manager.zig`
 
 **Subtasks**: ✅ All completed
 1. ✅ Create ColorManager struct
@@ -117,7 +117,7 @@
 
 **Description**: Build JSON parsing capability for streamed input
 
-**Implementation**: Leveraged existing `/Users/dharper/Documents/code/cc-streamer/src/parser/` modules with v2 ContentExtractor integration
+**Implementation**: Leveraged existing `/cc-streamer/src/parser/` modules with v2 ContentExtractor integration
 
 **Subtasks**: ✅ All completed (via ContentExtractor)
 1. ✅ JSON parsing using std.json (more robust than custom parser)
@@ -142,7 +142,7 @@
 
 **Description**: Extract type field from parsed JSON
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/message/content_extractor.zig`
+**Implementation**: `/cc-streamer/src/message/content_extractor.zig`
 
 **Subtasks**: ✅ All completed
 1. ✅ Type field extraction integrated into ContentExtractor
@@ -167,7 +167,7 @@
 
 **Description**: Extract message.content field from JSON
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/message/content_extractor.zig`
+**Implementation**: `/cc-streamer/src/message/content_extractor.zig`
 
 **Subtasks**: ✅ All completed and exceeded
 1. ✅ Create ContentExtractor struct with comprehensive configuration
@@ -208,7 +208,7 @@
 
 **Description**: Parse JSON escape sequences in strings
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/message/escape_renderer.zig`
+**Implementation**: `/cc-streamer/src/message/escape_renderer.zig`
 
 **Subtasks**: ✅ All completed (integrated)
 1. ✅ Escape parsing integrated into EscapeRenderer
@@ -233,7 +233,7 @@
 
 **Description**: Convert escape sequences to actual characters
 
-**Implementation**: `/Users/dharper/Documents/code/cc-streamer/src/message/escape_renderer.zig`
+**Implementation**: `/cc-streamer/src/message/escape_renderer.zig`
 
 **Subtasks**: ✅ All completed and exceeded
 1. ✅ Create EscapeRenderer struct with comprehensive configuration
