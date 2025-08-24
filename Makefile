@@ -25,6 +25,8 @@ all: build
 # Build the project
 .PHONY: build
 build:
+	@echo "Formatting source code..."
+	@$(ZIG) fmt src/
 	@echo "Building CC Streamer..."
 	@$(ZIG) build
 
@@ -36,7 +38,10 @@ release:
 
 # Run the application
 .PHONY: run
-run: build
+run:
+	@echo "Formatting source code..."
+	@$(ZIG) fmt src/
+	@$(MAKE) build
 	@$(BINARY)
 
 # Run with arguments

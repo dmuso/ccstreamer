@@ -281,7 +281,14 @@ pub fn isColorEnabled() bool {
     }
 
     // Check if stdout is a TTY
-    return std.posix.isatty(std.posix.STDOUT_FILENO);
+    // On Windows, STDOUT_FILENO is already a file descriptor type (*anyopaque)
+    // On Unix, it's a comptime_int that needs no casting
+    const stdout_fd = if (@import("builtin").os.tag == .windows)
+        std.io.getStdOut().handle
+    else
+        std.posix.STDOUT_FILENO;
+
+    return std.posix.isatty(stdout_fd);
 }
 
 // =====================================
