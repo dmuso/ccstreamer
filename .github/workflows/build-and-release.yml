@@ -16,54 +16,20 @@ jobs:
   build:
     name: Build - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    environment: ci
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
         - os: ubuntu-latest
           target: x86_64-linux
-          artifact_name: ccstreamer-linux-x86_64
-          archive_ext: tar.gz
         - os: ubuntu-latest
           target: aarch64-linux
-          artifact_name: ccstreamer-linux-arm64
-          archive_ext: tar.gz
         - os: macos-latest
           target: x86_64-macos
-          artifact_name: ccstreamer-macos-x86_64
-          archive_ext: tar.gz
         - os: macos-latest
           target: aarch64-macos
-          artifact_name: ccstreamer-macos-arm64
-          archive_ext: tar.gz
         - os: windows-latest
           target: x86_64-windows
-          artifact_name: ccstreamer-windows-x86_64
-          archive_ext: zip
-
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # The base64 of the contents of your '.p12' key.
-      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
-
-      # The password to open the '.p12' key.
-      MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
-
-      # The base64 of the contents of your '.p8' key.
-      MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
-
-      # The ID of the '.p8' key.
-      # You can find it in the filename, as well as the Apple Developer Portal
-      # website.
-      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
-
-      # The issuer UUID.
-      # You can find it in the Apple Developer Portal website.
-      MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
 
     steps:
     - name: Checkout code
@@ -96,6 +62,55 @@ jobs:
       if: (matrix.target == 'x86_64-linux' && matrix.target == 'aarch64-linux') || (matrix.os == 'macos-latest' && matrix.target == 'x86_64-macos') || matrix.target == 'x86_64-windows'
       run: |
         zig build test
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: ci
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The base64 of the contents of your '.p12' key.
+      MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+
+      # The password to open the '.p12' key.
+      MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+
+      # The base64 of the contents of your '.p8' key.
+      MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+
+      # The ID of the '.p8' key.
+      # You can find it in the filename, as well as the Apple Developer Portal
+      # website.
+      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+
+      # The issuer UUID.
+      # You can find it in the Apple Developer Portal website.
+      MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0 # Fetch all history for version determination
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: ${{ env.ZIG_VERSION }}
+
+    - name: Get version
+      id: get_version
+      shell: bash
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION="dev-$(git rev-parse --short HEAD)"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Releasing version: $VERSION"
 
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v6
