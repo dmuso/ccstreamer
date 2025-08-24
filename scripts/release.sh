@@ -140,7 +140,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}✓ Version ${NEW_VERSION} tagged successfully!${NC}"
     echo ""
     echo "To push the release:"
-    echo "  git push origin main"
+    echo "  git push origin master"
     echo "  git push origin ${NEW_VERSION}"
     echo ""
     echo "GitHub Actions will automatically build and create the release."

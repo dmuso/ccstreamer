@@ -103,7 +103,7 @@ jobs:
         Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}.zip"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}-${{ steps.get_version.outputs.VERSION }}
         path: |
