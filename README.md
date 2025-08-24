@@ -10,11 +10,11 @@ CC Streamer is a CLI app that accepts streamed JSON output from Claude Code and 
 
 ### Before CC Streamer
 
-![Before CC Streamer](https://github.com/dmuso/ccstreamer/docs/before-ccstreamer.png)
+![Before CC Streamer](https://github.com/dmuso/ccstreamer/blob/master/docs/before-ccstreamer.png)
 
 ### After CC Streamer
 
-![After CC Streamer](https://github.com/dmuso/ccstreamer/docs/after-ccstreamer.png)
+![After CC Streamer](https://github.com/dmuso/ccstreamer/blob/master/docs/after-ccstreamer.png)
 
 ## Installation
 
