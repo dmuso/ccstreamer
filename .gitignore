@@ -4,3 +4,7 @@ test-output.jsonl
 zig-out
 tmp
 run-claude-loop.sh
+
+# Added by goreleaser init:
+dist/
+.intentionally-empty-file.o

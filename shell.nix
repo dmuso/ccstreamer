@@ -8,6 +8,7 @@ pkgs.mkShell {
   buildInputs = with pkgs; [
     zig
     pkg-config
+    goreleaser
 
     nodejs_20
     
