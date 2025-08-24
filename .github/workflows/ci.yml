@@ -17,7 +17,7 @@ on:
       - 'LICENSE'
 
 env:
-  ZIG_VERSION: 0.14.0
+  ZIG_VERSION: 0.14.1
 
 jobs:
   lint-and-format:

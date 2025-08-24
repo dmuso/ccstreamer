@@ -253,9 +253,10 @@ pub fn isTty() bool {
         .windows => {
             // On Windows, check console mode
             const win = std.os.windows;
-            const stdout_handle = win.GetStdHandle(win.STD_OUTPUT_HANDLE) catch return false;
+            const kernel32 = win.kernel32;
+            const stdout_handle = kernel32.GetStdHandle(kernel32.STD_OUTPUT_HANDLE) catch return false;
             var mode: win.DWORD = undefined;
-            return win.GetConsoleMode(stdout_handle, &mode) != 0;
+            return kernel32.GetConsoleMode(stdout_handle, &mode) != 0;
         },
         else => {
             // On Unix-like systems, use isatty

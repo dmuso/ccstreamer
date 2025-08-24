@@ -9,7 +9,7 @@ on:
   workflow_dispatch:  # Allow manual triggering
 
 env:
-  ZIG_VERSION: 0.14.0  # Update to match your Zig version
+  ZIG_VERSION: 0.14.1  # Update to match your Zig version
 
 jobs:
   build:
