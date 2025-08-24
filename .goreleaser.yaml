@@ -18,7 +18,6 @@ builds:
   - aarch64-macos
   flags:
   - -Doptimize=ReleaseSafe
-  - -Dheaderpad_max_install_names=true
 
 archives:
 - formats: [ tar.gz ]
