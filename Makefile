@@ -22,11 +22,21 @@ endif
 .PHONY: all
 all: build
 
+# Lint the project
+.PHONY: lint
+lint:
+	@echo "Formatting source code..."
+	@$(ZIG) fmt src/
+	@$(ZIG) fmt test/
+	@$(ZIG) fmt build.zig
+
 # Build the project
 .PHONY: build
 build:
 	@echo "Formatting source code..."
 	@$(ZIG) fmt src/
+	@$(ZIG) fmt test/
+	@$(ZIG) fmt build.zig
 	@echo "Building CC Streamer..."
 	@$(ZIG) build
 

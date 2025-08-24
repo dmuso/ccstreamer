@@ -117,14 +117,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const run_allocator_tests = b.addRunArtifact(allocator_tests);
-    
+
     const test_utils_tests = b.addTest(.{
         .root_source_file = b.path("src/test_utils.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_test_utils_tests = b.addRunArtifact(test_utils_tests);
-    
+
     // Add stream processing tests
     const stream_reader_tests = b.addTest(.{
         .root_source_file = b.path("src/stream/reader.zig"),
@@ -132,14 +132,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const run_stream_reader_tests = b.addRunArtifact(stream_reader_tests);
-    
+
     const boundary_detector_tests = b.addTest(.{
         .root_source_file = b.path("src/stream/boundary_detector.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_boundary_detector_tests = b.addRunArtifact(boundary_detector_tests);
-    
+
     // Add parser module tests
     const tokenizer_tests = b.addTest(.{
         .root_source_file = b.path("src/parser/tokenizer.zig"),
@@ -147,21 +147,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const run_tokenizer_tests = b.addRunArtifact(tokenizer_tests);
-    
+
     const ast_tests = b.addTest(.{
         .root_source_file = b.path("src/parser/ast.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_ast_tests = b.addRunArtifact(ast_tests);
-    
+
     const parser_tests = b.addTest(.{
         .root_source_file = b.path("src/parser/parser.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_parser_tests = b.addRunArtifact(parser_tests);
-    
+
     // Add formatter module tests
     const indentation_tests = b.addTest(.{
         .root_source_file = b.path("src/formatter/indentation.zig"),
@@ -169,21 +169,21 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const run_indentation_tests = b.addRunArtifact(indentation_tests);
-    
+
     const json_formatter_tests = b.addTest(.{
         .root_source_file = b.path("src/formatter/json_formatter.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_json_formatter_tests = b.addRunArtifact(json_formatter_tests);
-    
+
     const colors_tests = b.addTest(.{
         .root_source_file = b.path("src/formatter/colors.zig"),
         .target = target,
         .optimize = optimize,
     });
     const run_colors_tests = b.addRunArtifact(colors_tests);
-    
+
     // Add behavioral tests
     const behavioral_tests = b.addTest(.{
         .root_source_file = b.path("test/behavioral_tests.zig"),
@@ -191,7 +191,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     const run_behavioral_tests = b.addRunArtifact(behavioral_tests);
-    
+
     // Add E2E tests
     const e2e_tests = b.addTest(.{
         .root_source_file = b.path("test/e2e_tests.zig"),
@@ -218,11 +218,11 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_colors_tests.step);
     test_step.dependOn(&run_behavioral_tests.step);
     test_step.dependOn(&run_e2e_tests.step);
-    
+
     // Create separate step for E2E tests only
     const e2e_step = b.step("test-e2e", "Run end-to-end tests");
     e2e_step.dependOn(&run_e2e_tests.step);
-    
+
     // Add a step for running tests with coverage
     const coverage_step = b.step("test-coverage", "Run tests with coverage");
     coverage_step.dependOn(&run_allocator_tests.step);
@@ -236,17 +236,13 @@ pub fn build(b: *std.Build) void {
     coverage_step.dependOn(&run_json_formatter_tests.step);
     coverage_step.dependOn(&run_colors_tests.step);
     coverage_step.dependOn(&run_behavioral_tests.step);
-    
+
     // Create a real coverage collection step using functional test validation
-    const coverage_collection_cmd = b.addSystemCommand(&.{
-        "bash", "-c", "./run_real_tests.sh"
-    });
-    
+    const coverage_collection_cmd = b.addSystemCommand(&.{ "bash", "-c", "./run_real_tests.sh" });
+
     // Add coverage threshold enforcement step that actually works
     const coverage_check_step = b.step("check-coverage", "Check coverage meets minimum threshold");
-    const coverage_check_cmd = b.addSystemCommand(&.{
-        "bash", "-c", 
-        "echo 'Checking coverage threshold...' && " ++
+    const coverage_check_cmd = b.addSystemCommand(&.{ "bash", "-c", "echo 'Checking coverage threshold...' && " ++
         "if [ -f tmp/coverage.txt ]; then " ++
         "COVERAGE=$(grep 'Overall coverage:' tmp/coverage.txt | grep -o '[0-9]*\\.[0-9]*' | head -1); " ++
         "echo \"Current coverage: $COVERAGE%\"; " ++
@@ -257,9 +253,8 @@ pub fn build(b: *std.Build) void {
         "fi; " ++
         "else " ++
         "echo 'ERROR: No coverage report found. Run coverage collection first.'; exit 1; " ++
-        "fi"
-    });
-    
+        "fi" });
+
     // Make coverage check depend on coverage collection
     coverage_check_cmd.step.dependOn(&coverage_collection_cmd.step);
     coverage_check_step.dependOn(&coverage_check_cmd.step);
